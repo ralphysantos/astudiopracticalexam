@@ -14,6 +14,8 @@ class Project extends Model
      * @var array<int, string>
      */
     protected $fillable = [
+        'name',
+        'status',
     ];
 
     public function users()

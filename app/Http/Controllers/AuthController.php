@@ -34,7 +34,7 @@ class AuthController extends Controller
     public function login(Request $request){
         try {
             $request->validate([
-                'email' => 'required|string|email',
+                'email' => 'required|string|email|regex:/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/',
                 'password' => 'required|string',
             ]);
 

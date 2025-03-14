@@ -59,10 +59,12 @@ class TimesheetController extends Controller
             ], 200);
 
         }catch (\Throwable $th) {
-            return response()->json([
-                'message' => 'Failed to get timesheet',
-                'error' => $th->getMessage()
-            ], 500);
+            $status = $th->status ?? 500;
+            $message = $status == 500 ? 'Something went wrong' : $th->getMessage();
+
+            return response()->json([            
+                'message' => $message,
+            ], $status);
         }
     }
 
@@ -80,10 +82,12 @@ class TimesheetController extends Controller
                 'timesheet' => $timesheet
             ], 200);
         } catch (\Throwable $th) {
-            return response()->json([
-                'message' => 'Failed to get timesheet',
-                'error' => $th->getMessage()
-            ]);
+            $status = $th->status ?? 500;
+            $message = $status == 500 ? 'Something went wrong' : $th->getMessage();
+
+            return response()->json([            
+                'message' => $message,
+            ], $status);
         }
     }
 
@@ -91,7 +95,7 @@ class TimesheetController extends Controller
         try {
             $request->validate([
                 'project_id' => 'required',
-                'task_name' => 'required',
+                'task_name' => 'required|unique:timesheets',
                 'date' => 'required|date',
                 'hours' => 'required',
             ]);
@@ -123,10 +127,12 @@ class TimesheetController extends Controller
                 'timesheet' => $timesheet
             ], 201);
         } catch (\Throwable $th) {
-            return response()->json([
-                'message' => 'Failed to create timesheet',
-                'error' => $th->getMessage()
-            ], 500);
+            $status = $th->status ?? 500;
+            $message = $status == 500 ? 'Something went wrong' : $th->getMessage();
+
+            return response()->json([            
+                'message' => $message,
+            ], $status);
         }
     }
 
@@ -168,10 +174,12 @@ class TimesheetController extends Controller
             ], 200);
 
         } catch (\Throwable $th) {
-            return response()->json([
-                'message' => 'Failed to update timesheet',
-                'error' => $th->getMessage()
-            ], 500);
+            $status = $th->status ?? 500;
+            $message = $status == 500 ? 'Something went wrong' : $th->getMessage();
+
+            return response()->json([            
+                'message' => $message,
+            ], $status);
         }
     }
 
@@ -191,10 +199,12 @@ class TimesheetController extends Controller
                 'message' => 'Timesheet deleted successfully',
             ], 200);
         } catch (\Throwable $th) {
-            return response()->json([
-                'message' => 'Failed to delete timesheet',
-                'error' => $th->getMessage()
-            ], 500);
+            $status = $th->status ?? 500;
+            $message = $status == 500 ? 'Something went wrong' : $th->getMessage();
+
+            return response()->json([            
+                'message' => $message,
+            ], $status);
         }
     }
 }

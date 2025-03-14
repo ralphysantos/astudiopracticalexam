@@ -52,7 +52,7 @@ class UserController extends Controller
             return response()->json([
                 'message' => 'Failed to get users',
                 'error' => $th->getMessage()
-            ], 500);
+            ], 404);
         }
     }
 
@@ -85,7 +85,7 @@ class UserController extends Controller
             return response()->json([
                 'message' => 'Failed to create user',
                 'error' => $th->getMessage()
-            ], 500);
+            ], 401);
         }
     }
 
@@ -104,8 +104,7 @@ class UserController extends Controller
             ], 200);
         } catch (\Throwable $th) {
             return response()->json([
-                'message' => 'Failed to get user',
-                'error' => $th->getMessage()
+                'message' => 'Something went wrong',
             ], 500);
         }
     }
@@ -143,7 +142,7 @@ class UserController extends Controller
             return response()->json([
                 'message' => 'Failed to update user',
                 'error' => $th->getMessage()
-            ], 500);
+            ], 400);
         }
     }
 
@@ -164,7 +163,7 @@ class UserController extends Controller
             if(!$user->delete()){             
                 return response()->json([
                     'message' => 'Failed to delete user'
-                ], 500);
+                ], 422);
             }
 
             return response()->json([

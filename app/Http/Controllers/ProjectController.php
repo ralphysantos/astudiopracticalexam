@@ -24,7 +24,7 @@ class ProjectController extends Controller
             if(!$project->save()){
                 return response()->json([
                     'message' => 'Failed to create project'
-                ], 500);
+                ], 422);
             }
 
             if($request->has('attributes')){
@@ -49,10 +49,12 @@ class ProjectController extends Controller
                 'project' => $project->load('attributes','users')
             ], 201);
         } catch (\Throwable $th) {
-            return response()->json([
-                'message' => 'Failed to create project',
-                'error' => $th->getMessage()
-            ], 500);
+            $status = $th->status ?? 500;
+            $message = $status == 500 ? 'Something went wrong' : $th->getMessage();
+
+            return response()->json([            
+                'message' => $message,
+            ], $status);
         }
     }
 
@@ -60,7 +62,7 @@ class ProjectController extends Controller
 
         try {
             $request->validate([
-                'name' => 'sometimes|unique',
+                'name' => 'sometimes|unique:projects',
                 'status'=> 'sometimes'
             ]);
             $project = Project::find($id);
@@ -70,7 +72,7 @@ class ProjectController extends Controller
                     'message' => 'Project not found'
                 ], 404);
             }
-
+            
             $project->update($request->except('attributes','attributes_detach','users','users_detach'));
 
             if($request->has('attributes')){
@@ -103,66 +105,77 @@ class ProjectController extends Controller
             ], 201);
         
         } catch (\Throwable $th) {
-            return response()->json([
-                'message' => 'Failed to update project',
-                'error' => $th->getMessage()
-            ], 500);
+            $status = $th->status ?? 500;
+            $message = $status == 500 ? 'Something went wrong' : $th->getMessage();
+            dd($th->getMessage());
+            return response()->json([            
+                'message' => $message,
+            ], $status);
         }
     }
 
     public function get(Request $request){
 
-        $project = Project::query();
-        if($request->has('filters')){
-            $customFilters = [];
-            $basicFilters = [];
-            foreach ($request->filters as $key => $value) {
-                $attr = Attribute::where('name', $key)->first();
-
-                $computedValue = isset( $request->filters[$key.'_operator']) ? $request->filters[$key.'_operator'] == 'like' ? '%'.$value.'%' : $value : $value;
-                if($attr){
-                    array_push($customFilters,[
-                        'name' => $key,
-                        'value' => $computedValue,
-                        'operator' => $request->filters[$key.'_operator'] ?? '='
-                    ]);
-                }else{
-                    if(!str_contains($key, '_operator')){
-                        array_push($basicFilters,[
+        try {
+            $project = Project::query();
+            if($request->has('filters')){
+                $customFilters = [];
+                $basicFilters = [];
+                foreach ($request->filters as $key => $value) {
+                    $attr = Attribute::where('name', $key)->first();
+    
+                    $computedValue = isset( $request->filters[$key.'_operator']) ? $request->filters[$key.'_operator'] == 'like' ? '%'.$value.'%' : $value : $value;
+                    if($attr){
+                        array_push($customFilters,[
                             'name' => $key,
                             'value' => $computedValue,
                             'operator' => $request->filters[$key.'_operator'] ?? '='
                         ]);
+                    }else{
+                        if(!str_contains($key, '_operator')){
+                            array_push($basicFilters,[
+                                'name' => $key,
+                                'value' => $computedValue,
+                                'operator' => $request->filters[$key.'_operator'] ?? '='
+                            ]);
+                        }
                     }
                 }
+    
+                $project->where(function($query) use ($customFilters){
+                    foreach ($customFilters as $filter) {
+                        $query->whereHas('attributes', function($query) use ($filter){
+                            $query->where('attributes.name',$filter['operator'],$filter['name'])
+                            ->where('attributes_values.value',$filter['operator'],$filter['value']);
+                        });
+                    }
+                });
+    
+                $project->where(function($query) use ($basicFilters){
+                    foreach ($basicFilters as $filter) {
+                        $query->where($filter['name'], $filter['operator'], $filter['value']);
+                    }
+                });
             }
+    
+            $projects = $project->with('attributes')->get();
+            
+            return response()->json([
+                'projects' => $projects
+            ], 200);
+        } catch (\Throwable $th) {
+            $status = $th->status ?? 500;
+            $message = $status == 500 ? 'Something went wrong' : $th->getMessage();
 
-            $project->where(function($query) use ($customFilters){
-                foreach ($customFilters as $filter) {
-                    $query->whereHas('attributes', function($query) use ($filter){
-                        $query->where('attributes.name',$filter['operator'],$filter['name'])
-                        ->where('attributes_values.value',$filter['operator'],$filter['value']);
-                    });
-                }
-            });
-
-            $project->where(function($query) use ($basicFilters){
-                foreach ($basicFilters as $filter) {
-                    $query->where($filter['name'], $filter['operator'], $filter['value']);
-                }
-            });
+            return response()->json([            
+                'message' => $message,
+            ], $status);
         }
-
-        $projects = $project->with('attributes')->get();
-        
-        return response()->json([
-            'projects' => $projects
-        ], 200);
     }
 
     public function getById($id){
         try {
-            $project = Project::with(['attributes'])->find($id);
+            $project = Project::with(['attributes','users'])->find($id);
 
             if(!$project){
                 return response()->json([
@@ -174,15 +187,23 @@ class ProjectController extends Controller
                 'project' => $project
             ], 200);
         } catch (\Throwable $th) {
-            return response()->json([
-                'message' => 'Failed to get project',
-                'error' => $th->getMessage()
-            ], 500);
+            $status = $th->status ?? 500;
+            $message = $status == 500 ? 'Something went wrong' : $th->getMessage();
+
+            return response()->json([            
+                'message' => $message,
+            ], $status);
         }
     }
     public function delete($id){
         try {
             $project = Project::find($id);
+
+            if(!$project){
+                return response()->json([
+                    'message' => 'Project not found'
+                ], 404);
+            }
 
             if($project->attributes->count() > 0){
                 $project->attributes()->detach();
@@ -191,17 +212,19 @@ class ProjectController extends Controller
             if(!$project->delete()){
                 return response()->json([
                     'message' => 'Failed to delete project'
-                ], 500);
+                ], 422);
             }
 
             return response()->json([
                 'message' => 'Project deleted successfully'
             ], 200);
         } catch (\Throwable $th) {
-            return response()->json([
-                'message' => 'Failed to delete project',
-                'error' => $th->getMessage()
-            ], 500);
+            $status = $th->status ?? 500;
+            $message = $status == 500 ? 'Something went wrong' : $th->getMessage();
+
+            return response()->json([            
+                'message' => $message,
+            ], $status);
         }
     }
 }
