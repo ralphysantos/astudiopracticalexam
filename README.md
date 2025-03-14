@@ -1,6 +1,6 @@
-# Setup Instructions for Existing Laravel API Project with Passport
+# Setup Instructions
 
-Follow these steps to set up an existing Laravel API project with Passport:
+Follow these steps to set up:
 
 1. **Clone the Repository**
     ```bash
